@@ -17,7 +17,6 @@ public class DIProvider {
 	enum DIRegistrationType {
 		case dependency(type: DIDependency.Type)
 		case lambda(value: () -> Any)
-		case singleton(type: DIDependency.Type)
 		case object(value: Any)
 	}
 
@@ -27,22 +26,35 @@ public class DIProvider {
 
 	private var diMap: [String: DIRegistrationType] = [:]
 	private var singletons: [String: DIDependency] = [:]
+	private var lambdaValues: [String: Any] = [:]
 
-	public func inject(forType type: Any) -> Any? {
+	public func inject(forType type: Any, cacheType: DICacheType) -> Any? {
 		let className = String(describing: type.self)
 		guard let registration = diMap[className] else { return nil }
 		switch registration {
 		case .dependency(let type):
-			return type.init()
-		case .lambda(let value):
-			return value()
-		case .singleton(let type):
-			if let obj = singletons[className] {
-				return obj
+			if cacheType == .share {
+				if let obj = singletons[className] {
+					return obj
+				} else {
+					let obj = type.init()
+					singletons[className] = obj
+					return obj
+				}
 			} else {
-				let obj = type.init()
-				singletons[className] = obj
-				return obj
+				return type.init()
+			}
+		case .lambda(let value):
+			if cacheType == .share {
+				if let obj = lambdaValues[className] {
+					return obj
+				} else {
+					let obj = value()
+					lambdaValues[className] = obj
+					return obj
+				}
+			} else {
+				return value()
 			}
 		case .object(let value):
 			return value
@@ -72,5 +84,7 @@ public class DIProvider {
 
 	public func clear() {
 		diMap = [:]
+		singletons = [:]
+		lambdaValues = [:]
 	}
 }
