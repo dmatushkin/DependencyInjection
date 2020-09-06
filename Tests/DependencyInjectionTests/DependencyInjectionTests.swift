@@ -83,11 +83,25 @@ final class DependencyInjectionTests: XCTestCase {
 		XCTAssertFalse(v1 as AnyObject === v2 as AnyObject)
 	}
 
+	func testSharedVarSame() {
+		DIProvider.shared.register(forType: TestInterface.self, dependency: TestImplementation.self)
+		let v1 = testVarShared
+		let v2 = testVarShared
+		XCTAssertTrue(v1 as AnyObject === v2 as AnyObject)
+	}
+
 	func testNonCachedLambdaVar() {
 		DIProvider.shared.register(forType: TestInterface.self, lambda: { return TestImplementation(value: "testStringLambda") })
 		let v1 = testVar
 		let v2 = testVar
 		XCTAssertFalse(v1 as AnyObject === v2 as AnyObject)
+	}
+
+	func testSharedLambdaVarSame() {
+		DIProvider.shared.register(forType: TestInterface.self, lambda: { return TestImplementation(value: "testStringLambda") })
+		let v1 = testVarShared
+		let v2 = testVarShared
+		XCTAssertTrue(v1 as AnyObject === v2 as AnyObject)
 	}
 
 	static var allTests = [
