@@ -13,8 +13,11 @@ public struct Autowired<T> {
 
 	private let cacheType: DICacheType
 
-	public init(cacheType: DICacheType = .local) {
+    public init(cacheType: DICacheType = .local, instantiateOnInit: Bool = false) {
 		self.cacheType = cacheType
+        if instantiateOnInit {
+            value = wrappedValue
+        }
 	}
 
 	private var value: T?
