@@ -16,7 +16,7 @@ public struct Autowired<T> {
     public init(cacheType: DICacheType = .local, instantiateOnInit: Bool = false) {
 		self.cacheType = cacheType
         if instantiateOnInit {
-            value = wrappedValue
+            _ = wrappedValue
         }
 	}
 
