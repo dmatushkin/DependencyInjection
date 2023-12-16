@@ -23,42 +23,45 @@ public class DIProvider {
 	private init() {}
 
 	public static let shared = DIProvider()
+    private static let queue = DispatchQueue(label: "DIQueue")
 
 	private var diMap: [String: DIRegistrationType] = [:]
 	private var singletons: [String: DIDependency] = [:]
 	private var lambdaValues: [String: Any] = [:]
 
 	public func inject(forType type: Any, cacheType: DICacheType) -> Any? {
-		let className = String(describing: type.self)
-		guard let registration = diMap[className] else { return nil }
-		switch registration {
-		case .dependency(let type):
-			if cacheType == .share {
-				if let obj = singletons[className] {
-					return obj
-				} else {
-					let obj = type.init()
-					singletons[className] = obj
-					return obj
-				}
-			} else {
-				return type.init()
-			}
-		case .lambda(let value):
-			if cacheType == .share {
-				if let obj = lambdaValues[className] {
-					return obj
-				} else {
-					let obj = value()
-					lambdaValues[className] = obj
-					return obj
-				}
-			} else {
-				return value()
-			}
-		case .object(let value):
-			return value
-		}
+        Self.queue.sync {
+            let className = String(describing: type.self)
+            guard let registration = diMap[className] else { return nil }
+            switch registration {
+            case .dependency(let type):
+                if cacheType == .share {
+                    if let obj = singletons[className] {
+                        return obj
+                    } else {
+                        let obj = type.init()
+                        singletons[className] = obj
+                        return obj
+                    }
+                } else {
+                    return type.init()
+                }
+            case .lambda(let value):
+                if cacheType == .share {
+                    if let obj = lambdaValues[className] {
+                        return obj
+                    } else {
+                        let obj = value()
+                        lambdaValues[className] = obj
+                        return obj
+                    }
+                } else {
+                    return value()
+                }
+            case .object(let value):
+                return value
+            }
+        }		
 	}
 
 	@discardableResult
