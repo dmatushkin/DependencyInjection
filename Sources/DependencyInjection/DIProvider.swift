@@ -23,69 +23,79 @@ public class DIProvider {
 	private init() {}
 
 	public static let shared = DIProvider()
-    private static let queue = DispatchQueue(label: "DIQueue")
+    private static let queue = DispatchQueue(label: "DIQueue", qos: .userInitiated)
 
 	private var diMap: [String: DIRegistrationType] = [:]
 	private var singletons: [String: DIDependency] = [:]
 	private var lambdaValues: [String: Any] = [:]
 
 	public func inject(forType type: Any, cacheType: DICacheType) -> Any? {
-        let className = String(describing: type.self)
-        guard let registration = diMap[className] else { return nil }
-        switch registration {
-        case .dependency(let type):
-            if cacheType == .share {
-                if let obj = singletons[className] {
-                    return obj
+        Self.queue.sync {
+            let className = String(describing: type.self)
+            guard let registration = diMap[className] else { return nil }
+            switch registration {
+            case .dependency(let type):
+                if cacheType == .share {
+                    if let obj = singletons[className] {
+                        return obj
+                    } else {
+                        let obj = type.init()
+                        singletons[className] = obj
+                        return obj
+                    }
                 } else {
-                    let obj = type.init()
-                    singletons[className] = obj
-                    return obj
+                    return type.init()
                 }
-            } else {
-                return type.init()
-            }
-        case .lambda(let value):
-            if cacheType == .share {
-                if let obj = lambdaValues[className] {
-                    return obj
+            case .lambda(let value):
+                if cacheType == .share {
+                    if let obj = lambdaValues[className] {
+                        return obj
+                    } else {
+                        let obj = value()
+                        lambdaValues[className] = obj
+                        return obj
+                    }
                 } else {
-                    let obj = value()
-                    lambdaValues[className] = obj
-                    return obj
+                    return value()
                 }
-            } else {
-                return value()
+            case .object(let value):
+                return value
             }
-        case .object(let value):
-            return value
         }
 	}
 
 	@discardableResult
 	public func register(forType type: Any, lambda: @escaping () -> Any) -> DIProvider {
 		let className = String(describing: type.self)
-		diMap[className] = .lambda(value: lambda)
+        Self.queue.sync {
+            diMap[className] = .lambda(value: lambda)
+        }
 		return self
 	}
 
 	@discardableResult
 	public func register(forType type: Any, object: Any) -> DIProvider {
 		let className = String(describing: type.self)
-		diMap[className] = .object(value: object)
+        Self.queue.sync {
+            diMap[className] = .object(value: object)
+        }
 		return self
 	}
 
 	@discardableResult
 	public func register(forType type: Any, dependency: DIDependency.Type) -> DIProvider {
 		let className = String(describing: type.self)
-		diMap[className] = .dependency(type: dependency)
+        Self.queue.sync {
+            diMap[className] = .dependency(type: dependency)
+        }
 		return self
 	}
 
 	public func clear() {
-		diMap = [:]
-		singletons = [:]
-		lambdaValues = [:]
+        Self.queue.sync {
+            diMap = [:]
+            singletons = [:]
+            lambdaValues = [:]
+        }
 	}
 }
